@@ -3,6 +3,7 @@ set cpo&vim
 
 let g:GBlameVirtualTextEnable = 1
 let g:GBlameVirtualTextPrefix = get(g:, 'GBlameVirtualTextPrefix', "    > ")
+let g:GBlameShortLineOffset = 100
 
 function! s:system(str, ...)
   let command = a:str
@@ -71,12 +72,18 @@ function! gitblame#echo()
         let l:echoMsg = '['.l:gb['commit_hash'][0:8].'] '.l:gb['summary'] .l:blank .l:gb['author_mail'] .l:blank .l:gb['author'] .l:blank .'('.l:gb['author_time'].')'
     endif
 
+    " if the line is short, add spaces to padd the message
+    let l:echoMsg = g:GBlameVirtualTextPrefix.l:echoMsg
+    let l:offset = strwidth(getline(l:line))
+    if l:offset < g:GBlameShortLineOffset
+        let l:echoMsg = repeat(' ', g:GBlameShortLineOffset - l:offset).l:echoMsg
+    endif
+
     " changes flag so we clear this line next time we call the echo method
     let s:was_set = 1
     let s:ns = nvim_create_namespace('gitBlame')
-    let l:line = line('.')
     let s:buffer = bufnr('')
-    call nvim_buf_set_virtual_text(s:buffer, s:ns, l:line-1, [[g:GBlameVirtualTextPrefix.l:echoMsg, 'GBlameMSG']], {})
+    call nvim_buf_set_virtual_text(s:buffer, s:ns, l:line-1, [[l:echoMsg, 'GBlameMSG']], {})
 endfunction
 
 let &cpo = s:save_cpo
