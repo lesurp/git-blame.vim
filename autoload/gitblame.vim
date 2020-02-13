@@ -21,15 +21,15 @@ function! gitblame#commit_summary(file, line)
     let git_blame = split(s:system('cd "$(dirname "'.a:file.'")"; git --no-pager blame "$(basename "'.a:file.'")" -L "$(basename "'.a:line.'")",+1 --porcelain'), "\n")
     let l:shell_error = v:shell_error
     if l:shell_error && ( git_blame[0] =~# '^fatal: Not a git repository' || git_blame[0] =~# '^fatal: cannot stat path' )
-        return {'error': 'Not a git repository'}
+        return {'error': 'Not a git repository', 'error_code': 1}
     elseif l:shell_error
-        return {'error': 'Unhandled error: '.git_blame[0]}
+        return {'error': 'Unhandled error: '.git_blame[0], 'error_code': 0}
     endif
 
     let commit_hash = matchstr( git_blame[0], '^\^*\zs\S\+' )
     if commit_hash =~# '^0\+$'
         " not committed yet
-        return {'error': 'Not Committed yet'}
+        return {'error': 'Not Committed yet', 'error_code': 2}
     endif
 
     let summary = ''
@@ -62,6 +62,10 @@ function! gitblame#echo()
     let l:line = line('.')
     let l:gb = gitblame#commit_summary(l:file, l:line)
     if has_key(l:gb, 'error')
+        " if we are not in a git repo we do nothing
+        if l:gb['error_code'] == 1
+            return
+        endif
         let l:echoMsg = '['.l:gb['error'].']'
     else
         let l:echoMsg = '['.l:gb['commit_hash'][0:8].'] '.l:gb['summary'] .l:blank .l:gb['author_mail'] .l:blank .l:gb['author'] .l:blank .'('.l:gb['author_time'].')'
